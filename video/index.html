@@ -1,1 +1,272 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Premium Video Groups</title>
+    <style>
+        /* ==========================================
+           Core Reset & Theme
+           ========================================== */
+        :root {
+            --bg-color: #0f0f0f;
+            --card-bg: #212121;
+            --text-main: #ffffff;
+            --text-sub: #aaaaaa;
+            --accent: #ff0000; /* YouTube Red */
+            --green: #00a884;
+            --premium-gold: #ffd700;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body, html { width: 100%; height: 100%; background-color: #000; display: flex; justify-content: center; align-items: center; }
+        .app-container { width: 100%; height: 100%; max-width: 480px; background-color: var(--bg-color); display: flex; flex-direction: column; position: relative; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        
+        /* ==========================================
+           Header
+           ========================================== */
+        .app-header { display: flex; align-items: center; padding: 15px 20px; background-color: var(--card-bg); border-bottom: 1px solid #333; z-index: 10; position: relative;}
+        .app-header h2 { color: var(--text-main); font-size: 1.3rem; font-weight: bold; flex: 1; }
+        .back-btn { width: 30px; height: 30px; fill: white; cursor: pointer; margin-right: 15px; display: none; }
 
+        /* ==========================================
+           Video List View (YouTube Style)
+           ========================================== */
+        #listView { flex: 1; overflow-y: auto; padding-bottom: 20px; }
+        #listView::-webkit-scrollbar { width: 0px; }
+        
+        .video-card { background: var(--card-bg); margin-bottom: 15px; display: flex; flex-direction: column; }
+        
+        /* Profile Header inside Card */
+        .card-header { display: flex; align-items: center; padding: 12px 15px; cursor: pointer; }
+        .card-profile-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--green); }
+        .card-profile-img.premium { border-color: var(--premium-gold); }
+        .card-info { margin-left: 12px; flex: 1; }
+        .card-name { color: var(--text-main); font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+        .card-sub { color: var(--text-sub); font-size: 0.8rem; margin-top: 2px; }
+        .join-btn { background: rgba(255,255,255,0.1); color: white; border: none; padding: 6px 15px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; cursor: pointer; }
+        .join-btn.premium-btn { background: var(--premium-gold); color: #000; }
+
+        /* Video Frame */
+        .video-frame { width: 100%; aspect-ratio: 16/9; background: #000; position: relative; }
+        .video-frame video { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* Lock Overlay for Premium */
+        .lock-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--premium-gold); cursor: pointer; z-index: 5; }
+        .lock-overlay svg { width: 50px; height: 50px; fill: var(--premium-gold); margin-bottom: 10px; }
+        .lock-text { font-size: 1.1rem; font-weight: bold; color: white; }
+
+        /* ==========================================
+           Group Inbox View
+           ========================================== */
+        #groupInboxView { display: none; flex: 1; flex-direction: column; background: #0b141a; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 50; }
+        
+        .inbox-header { background-color: #202c33; padding: 10px 15px; display: flex; align-items: center; height: 60px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .inbox-header img { width: 40px; height: 40px; border-radius: 50%; margin-right: 15px; object-fit: cover; }
+        .inbox-header-info { flex: 1; display: flex; flex-direction: column; }
+        .inbox-header-name { color: #fff; font-size: 1.1rem; font-weight: bold; }
+        .inbox-header-status { color: #8696a0; font-size: 0.8rem; }
+
+        .inbox-messages { flex: 1; overflow-y: auto; padding: 15px; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; background-position: center; display: flex; flex-direction: column; gap: 15px;}
+        .inbox-messages::-webkit-scrollbar { width: 4px; } .inbox-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        
+        /* Individual dynamic video frame in Inbox */
+        .msg-video-card { background: #202c33; padding: 5px; border-radius: 10px; max-width: 90%; align-self: flex-start; box-shadow: 0 2px 5px rgba(0,0,0,0.3); width: 100%;}
+        .msg-video-card video { width: 100%; border-radius: 8px; background: #000; aspect-ratio: 16/9; object-fit: contain; }
+        .msg-time { text-align: right; font-size: 0.7rem; color: #8696a0; margin-top: 5px; padding-right: 5px; }
+
+        .inbox-footer { background-color: #202c33; padding: 12px; text-align: center; color: #8696a0; font-size: 0.9rem; font-style: italic; border-top: 1px solid #2a3942; }
+
+        /* Loader */
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid var(--green); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    
+    <!-- MAIN LIST VIEW -->
+    <div id="listView" style="display: flex; flex-direction: column;">
+        <div class="app-header">
+            <h2>🎥 Premium Video Groups</h2>
+        </div>
+        <div id="videoListContainer">
+            <!-- JS will load 50 items here -->
+        </div>
+    </div>
+
+    <!-- GROUP INBOX VIEW -->
+    <div id="groupInboxView">
+        <div class="inbox-header">
+            <svg class="back-btn" style="display: block;" id="closeInboxBtn" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"></path></svg>
+            <img src="" id="inboxGroupImg" alt="Group">
+            <div class="inbox-header-info">
+                <span class="inbox-header-name" id="inboxGroupName">Group Name</span>
+                <span class="inbox-header-status">Only admins can send videos</span>
+            </div>
+        </div>
+        
+        <div class="inbox-messages" id="inboxMessageArea">
+            <!-- Dynamic Videos from Firebase will appear here -->
+        </div>
+
+        <div class="inbox-footer">
+            🔒 This group is strictly for watching videos. Messaging is disabled.
+        </div>
+    </div>
+
+</div>
+
+<!-- Firebase Scripts -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // 1. Firebase Config (তোমার দেওয়া কনফিগ)
+    const firebaseConfig = {
+        apiKey: "AIzaSyCYH0ZSeLjH_T3HJ9hVQ84afB5KyAEZi2Y",
+        authDomain: "my-sc-tools.firebaseapp.com",
+        databaseURL: "https://my-sc-tools-default-rtdb.firebaseio.com",
+        projectId: "my-sc-tools",
+        storageBucket: "my-sc-tools.appspot.com",
+        messagingSenderId: "285986090017",
+        appId: "1:285986090017:web:9d872b9bb5c472bcb74760"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // 2. Generate 50 Groups Logic
+    const baseNames = ['দেশী ভাইরাল ভিডিও', 'পারিবারিক গোপন ভিডিও', 'টিকটক লিকস কালেকশন', 'স্কুল কলেজের ভাইরাল', 'হিডেন ক্যামেরা কালেকশন', 'প্রাইভেট ভিডিও হাব', 'এক্সক্লুসিভ দেশী জোন'];
+    const videoGroups = [];
+
+    for(let i=1; i<=50; i++) {
+        // Free vs Premium Logic based on your instruction
+        let isPremium = false;
+        if(i >= 6 && i <= 15) isPremium = true;
+        if(i >= 21 && i <= 50) isPremium = true;
+
+        // Generate Random Price between 200 - 500 for Premium
+        let price = Math.floor(Math.random() * (500 - 200 + 1)) + 200;
+
+        videoGroups.push({
+            id: `grp_100${i}`,
+            name: `${baseNames[i % baseNames.length]} - Part ${i}`,
+            image: `my-group${i}.jpg`,
+            previewVideo: `my-video${i}.mp4`,
+            isPremium: isPremium,
+            price: price,
+            members: (Math.random() * 50 + 10).toFixed(1) + 'K'
+        });
+    }
+
+    // 3. Render List UI
+    const listContainer = document.getElementById('videoListContainer');
+    
+    videoGroups.forEach(group => {
+        const card = document.createElement('div');
+        card.className = 'video-card';
+        
+        // Lock Overlay HTML
+        let lockOverlayHtml = '';
+        let btnHtml = `<button class="join-btn" onclick="openGroup('${group.id}', '${group.name}', '${group.image}')">Join Group</button>`;
+        let premiumClass = '';
+
+        if(group.isPremium) {
+            premiumClass = 'premium';
+            lockOverlayHtml = `
+                <div class="lock-overlay" onclick="alert('🔒 এই প্রিমিয়াম গ্রুপটি আনলক করতে ${group.price} টাকা পেমেন্ট করতে হবে। পেমেন্ট করতে এডমিনের সাথে যোগাযোগ করুন।')">
+                    <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+                    <div class="lock-text">Premium Group - ${group.price} BDT</div>
+                </div>`;
+            btnHtml = `<button class="join-btn premium-btn" onclick="alert('🔒 এই প্রিমিয়াম গ্রুপটি আনলক করতে ${group.price} টাকা পেমেন্ট করতে হবে।')">👑 Get Premium</button>`;
+        }
+
+        // Attach Profile Click Logic
+        const onProfileClick = group.isPremium 
+            ? `alert('🔒 এই প্রিমিয়াম গ্রুপটি আনলক করতে ${group.price} টাকা পেমেন্ট করতে হবে।')`
+            : `openGroup('${group.id}', '${group.name}', '${group.image}')`;
+
+        card.innerHTML = `
+            <div class="card-header" onclick="${onProfileClick}">
+                <img src="${group.image}" class="card-profile-img ${premiumClass}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png'">
+                <div class="card-info">
+                    <div class="card-name">${group.name} ${group.isPremium ? '👑' : '✅'}</div>
+                    <div class="card-sub">${group.members} Members • Unlimited Videos</div>
+                </div>
+                ${btnHtml}
+            </div>
+            <div class="video-frame">
+                ${lockOverlayHtml}
+                <video src="${group.previewVideo}" controls preload="none" poster="${group.image}" style="${group.isPremium ? 'filter: blur(10px);' : ''}"></video>
+            </div>
+        `;
+        listContainer.appendChild(card);
+    });
+
+    // 4. Open Group & Load Firebase Videos Logic
+    let currentFirebaseListener = null;
+
+    window.openGroup = function(groupId, groupName, groupImage) {
+        document.getElementById('listView').style.display = 'none';
+        document.getElementById('groupInboxView').style.display = 'flex';
+        
+        document.getElementById('inboxGroupName').innerText = groupName;
+        document.getElementById('inboxGroupImg').src = groupImage;
+        
+        const msgArea = document.getElementById('inboxMessageArea');
+        msgArea.innerHTML = `<div class="loader"></div><div style="text-align:center; color:#8696a0;">Loading encrypted videos...</div>`;
+
+        // Detach old listener if exists
+        if(currentFirebaseListener) { currentFirebaseListener(); }
+
+        // Attach Firebase listener to exactly this Group ID
+        // Database Path: group_videos/{groupId}
+        const groupRef = ref(db, `group_videos/${groupId}`);
+        
+        currentFirebaseListener = onValue(groupRef, (snapshot) => {
+            msgArea.innerHTML = ''; // Clear loading
+            
+            const videos = snapshot.val();
+            if(!videos) {
+                msgArea.innerHTML = `<div style="text-align:center; color:#8696a0; margin-top:50px;">No videos uploaded yet in this group. Wait for admin update!</div>`;
+                return;
+            }
+
+            // Loop through all videos sent by bot and render them
+            Object.keys(videos).forEach(key => {
+                const vidData = videos[key];
+                
+                // Format Time safely
+                let d = new Date(vidData.timestamp || Date.now());
+                let timeStr = d.getHours() + ':' + (d.getMinutes()<10?'0':'') + d.getMinutes();
+
+                const videoHtml = `
+                    <div class="msg-video-card">
+                        <video src="${vidData.url}" controls preload="none"></video>
+                        <div class="msg-time">${timeStr}</div>
+                    </div>
+                `;
+                msgArea.innerHTML += videoHtml;
+            });
+            
+            // Scroll to bottom
+            setTimeout(() => { msgArea.scrollTop = msgArea.scrollHeight; }, 100);
+        });
+    };
+
+    // 5. Back Button Logic
+    document.getElementById('closeInboxBtn').onclick = () => {
+        document.getElementById('groupInboxView').style.display = 'none';
+        document.getElementById('listView').style.display = 'flex';
+        // Pause all playing videos in inbox to save data
+        const vids = document.getElementById('inboxMessageArea').querySelectorAll('video');
+        vids.forEach(v => v.pause());
+        
+        if(currentFirebaseListener) currentFirebaseListener(); // stop listening
+    };
+
+</script>
+
+</body>
+</html>
