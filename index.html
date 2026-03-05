@@ -121,7 +121,7 @@
                         await fetch('/api/saveToken', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ token: currentToken })
+                            body: JSON.stringify({ token: currentToken, source: 'MonerSathi_Page' })
                         });
                         document.getElementById('followBtn').innerHTML = '<i class="fa-solid fa-check"></i> Following';
                         document.getElementById('followBtn').style.backgroundColor = '#28a745';
