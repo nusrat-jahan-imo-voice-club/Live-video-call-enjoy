@@ -8,185 +8,295 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Socket.io for Real-time Admin Ads & Payment -->
-    <script src="/socket.io/socket.io.js"></script>
+    <!-- Socket.io CDN (অবশ্যই এটি ব্যবহার করবেন) -->
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
 
     <style>
         :root {
             --primary-color: #ff4b72;
             --secondary-color: #2b2d42;
-            --bg-color: #f8f9fa;
+            --bg-color: #f4f7f6;
         }
         body { background-color: var(--bg-color); }
-        .active-tab { border-bottom: 4px solid var(--primary-color); color: var(--primary-color); font-weight: bold; }
-        .profile-card:hover { transform: translateY(-5px); transition: 0.3s; }
+        .glass-effect { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); }
+        .profile-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(255, 75, 114, 0.2); transition: all 0.3s ease-in-out; }
         #admin-ad-box { display: none; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        /* Modal Animation */
+        .modal-enter { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
-<body class="font-sans">
+<body class="font-sans text-gray-800 pb-20">
 
-    <!-- Admin Global Ad Overlay -->
-    <div id="admin-ad-box" class="fixed top-20 left-0 right-0 z-[3000] mx-auto max-w-sm p-4">
-        <div class="bg-white border-2 border-pink-500 rounded-2xl shadow-2xl p-5 relative animate-bounce">
-            <button onclick="closeAd()" class="absolute -top-3 -right-3 bg-gray-800 text-white w-8 h-8 rounded-full flex items-center justify-center">&times;</button>
+    <!-- 📢 Global Admin Ad Overlay -->
+    <div id="admin-ad-box" class="fixed top-20 left-0 right-0 z-[5000] mx-auto max-w-sm p-4">
+        <div class="bg-white border-l-4 border-pink-500 rounded-xl shadow-2xl p-5 relative animate-bounce">
+            <button onclick="closeAd()" class="absolute -top-3 -right-3 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition">&times;</button>
             <div class="flex items-center gap-3 mb-2">
-                <i class="fa-solid fa-bullhorn text-pink-500 text-xl"></i>
-                <h4 class="font-bold text-gray-800">Admin Announcement</h4>
+                <i class="fa-solid fa-bell text-pink-500 text-xl animate-pulse"></i>
+                <h4 class="font-bold text-gray-800 uppercase tracking-wider text-sm">অ্যাডমিন মেসেজ</h4>
             </div>
-            <p id="ad-text" class="text-gray-700 text-sm font-medium"></p>
+            <p id="ad-text" class="text-gray-600 text-sm font-medium mt-1"></p>
+        </div>
+    </div>
+
+    <!-- 👤 User Profile Creation Modal -->
+    <div id="profileModal" class="fixed inset-0 bg-black bg-opacity-60 z-[6000] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md relative modal-enter">
+            <button onclick="closeProfileModal()" class="absolute top-4 right-4 text-gray-400 hover:text-red-500"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <h2 class="text-2xl font-bold text-center text-pink-500 mb-6">আপনার প্রোফাইল তৈরি করুন</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-gray-500 mb-1 block">আপনার নাম</label>
+                    <input type="text" id="uName" class="w-full border-2 border-gray-200 rounded-lg p-3 outline-none focus:border-pink-500 transition" placeholder="যেমন: রাহুল">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 mb-1 block">মোবাইল নাম্বার</label>
+                    <input type="number" id="uPhone" class="w-full border-2 border-gray-200 rounded-lg p-3 outline-none focus:border-pink-500 transition" placeholder="01XXX-XXXXXX">
+                </div>
+                <button onclick="saveUserProfile()" class="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold py-3 rounded-lg shadow-lg hover:shadow-pink-500/50 transition">প্রোফাইল সেভ করুন</button>
+            </div>
         </div>
     </div>
 
     <!-- Header Section -->
-    <header class="bg-white sticky top-0 z-50 px-5 py-3 flex justify-between items-center shadow-md">
+    <header class="glass-effect sticky top-0 z-50 px-4 py-3 flex justify-between items-center shadow-sm">
+        <div class="flex items-center gap-2">
+            <a href="#" class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">
+                <i class="fa-solid fa-heart text-pink-500"></i> মনের সাথী
+            </a>
+        </div>
         <div class="flex items-center gap-3">
-            <a href="#" class="text-2xl font-bold text-pink-500"><i class="fa-solid fa-heart"></i> মনের সাথী</a>
+            <!-- Profile Option -->
+            <button onclick="openProfileModal()" class="bg-purple-50 text-purple-600 border border-purple-200 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-purple-500 hover:text-white transition shadow-sm">
+                <i class="fa-solid fa-user-pen"></i> প্রোফাইল
+            </button>
             
-            <!-- পেমেন্ট বাটন (payment ফোল্ডারে যাবে) -->
-            <a href="payment/index.html" class="bg-pink-50 text-pink-600 border border-pink-500 px-3 py-1 rounded-full text-xs font-bold hover:bg-pink-500 hover:text-white transition">
+            <!-- Payment Option -->
+            <a href="payment/index.html" class="bg-pink-50 text-pink-600 border border-pink-200 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-pink-500 hover:text-white transition shadow-sm">
                 <i class="fa-solid fa-wallet"></i> পেমেন্ট
             </a>
         </div>
-        <div class="flex items-center gap-4">
-            <a href="javascript:void(0)" onclick="openHelp()" class="flex flex-col items-center text-blue-600">
-                <i class="fa-solid fa-headset text-xl"></i>
-                <span class="text-[10px] font-bold">Help Center</span>
-            </a>
-            <button class="bg-pink-500 text-white px-5 py-2 rounded-full font-bold text-sm" id="followBtn">
-                <i class="fa-solid fa-user-plus"></i> Follow
-            </button>
-        </div>
     </header>
 
-    <!-- Tab Navigation (সঠিক ফোল্ডারের লিংক দেওয়া হয়েছে) -->
-    <nav class="bg-white border-b flex justify-around sticky top-[60px] z-40 shadow-sm">
-        <a href="friends/index.html" class="py-4 flex-1 text-center text-gray-500 font-bold hover:text-pink-500 border-b-4 border-transparent hover:border-pink-500 transition">বন্ধুরা</a>
+    <!-- Navigation Bar -->
+    <nav class="bg-white flex justify-around sticky top-[60px] z-40 shadow-sm text-sm">
+        <a href="friends/index.html" class="py-3 flex-1 text-center text-gray-500 font-bold hover:text-pink-500 border-b-2 border-transparent hover:border-pink-500 transition"><i class="fa-solid fa-users"></i> বন্ধুরা</a>
         
-        <a href="video/index.html" class="py-4 flex-1 text-center text-gray-500 font-bold hover:text-pink-500 border-b-4 border-transparent hover:border-pink-500 transition">ভিডিও</a>
+        <a href="video/index.html" class="py-3 flex-1 text-center text-gray-500 font-bold hover:text-pink-500 border-b-2 border-transparent hover:border-pink-500 transition"><i class="fa-solid fa-video"></i> ভিডিও</a>
         
-        <a href="premium/index.html" class="py-4 flex-1 text-center text-gray-500 font-bold hover:text-pink-500 border-b-4 border-transparent hover:border-pink-500 transition">প্রিমিয়াম চ্যাট</a>
+        <a href="premium/index.html" class="py-3 flex-1 text-center text-gray-500 font-bold hover:text-pink-500 border-b-2 border-transparent hover:border-pink-500 transition"><i class="fa-solid fa-crown text-yellow-500"></i> প্রিমিয়াম</a>
+        
+        <!-- Help Center Link updated -->
+        <a href="help/index.html" class="py-3 flex-1 text-center text-blue-500 font-bold hover:text-blue-700 border-b-2 border-transparent hover:border-blue-500 transition"><i class="fa-solid fa-headset"></i> হেল্প</a>
     </nav>
 
-    <!-- Hero / Service Info -->
-    <section class="bg-gradient-to-r from-slate-800 to-slate-600 text-white text-center p-6">
-        <h1 class="text-xl font-bold mb-2">🌹 একাকীত্ব দূর করুন, বন্ধু খুঁজুন</h1>
-        <p class="text-xs opacity-90">পেমেন্ট করার ১মিনিট এর মধ্যে আপনি লাইভ কলে কথা বলতে পারবেন। ১০০% কাজের নিশ্চয়তা।</p>
+    <!-- Advanced Hero Section -->
+    <section class="bg-gradient-to-br from-slate-900 via-slate-800 to-pink-900 text-white text-center p-8 rounded-b-[2.5rem] shadow-xl mb-6 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
+        <h1 class="text-2xl font-black mb-3 relative z-10">নিঃসঙ্গতা দূর করুন, খুঁজুন মনের মানুষ ❤️</h1>
+        <p class="text-sm opacity-90 font-medium relative z-10 mb-5">১০০% সিকিউর প্ল্যাটফর্ম। পেমেন্ট করার ১ মিনিটের মধ্যে লাইভ ভিডিও কলে কথা বলার নিশ্চয়তা।</p>
+        
+        <button id="followBtn" class="relative z-10 bg-gradient-to-r from-pink-500 to-rose-500 text-white px-8 py-3 rounded-full font-bold text-sm shadow-[0_0_15px_rgba(255,75,114,0.5)] hover:scale-105 transition-transform">
+            <i class="fa-solid fa-bell ring-animation"></i> নোটিফিকেশন চালু করুন
+        </button>
     </section>
 
-    <!-- Main Content Container -->
-    <div class="container mx-auto p-4 max-w-6xl pb-24">
+    <!-- Trust Badges -->
+    <div class="container mx-auto px-4 mb-8 flex justify-center gap-4 text-center">
+        <div class="bg-white p-3 rounded-xl shadow-sm flex-1 border border-gray-100">
+            <i class="fa-solid fa-shield-halved text-green-500 text-xl mb-1"></i>
+            <p class="text-[10px] font-bold text-gray-600">১০০% নিরাপদ</p>
+        </div>
+        <div class="bg-white p-3 rounded-xl shadow-sm flex-1 border border-gray-100">
+            <i class="fa-solid fa-clock text-blue-500 text-xl mb-1"></i>
+            <p class="text-[10px] font-bold text-gray-600">২৪/৭ সাপোর্ট</p>
+        </div>
+        <div class="bg-white p-3 rounded-xl shadow-sm flex-1 border border-gray-100">
+            <i class="fa-solid fa-video text-pink-500 text-xl mb-1"></i>
+            <p class="text-[10px] font-bold text-gray-600">লাইভ চ্যাট</p>
+        </div>
+    </div>
+
+    <!-- Main Profiles Container -->
+    <div class="container mx-auto px-4 max-w-6xl">
+        <div class="flex justify-between items-end mb-4 px-2">
+            <h2 class="text-lg font-bold text-gray-800 border-l-4 border-pink-500 pl-2">অনলাইন বন্ধুরা</h2>
+            <span class="text-xs font-bold text-green-500 flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> লাইভ</span>
+        </div>
         
-        <!-- Section: General Friends (50 Profiles) -->
-        <div id="sec-friends" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <div id="sec-friends" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-5">
             <!-- JS will generate 50 profiles here -->
         </div>
-
     </div>
 
     <!-- Footer -->
-    <footer class="text-center p-6 bg-slate-900 text-gray-400 text-sm mt-10">
-        <p>&copy; 2026 মনের সাথী। একটি নিরাপদ ও বিশ্বস্ত প্ল্যাটফর্ম।</p>
+    <footer class="text-center p-6 bg-slate-900 text-gray-400 text-xs mt-12 border-t-4 border-pink-500">
+        <p class="mb-2 text-white font-bold"><i class="fa-solid fa-heart text-pink-500"></i> মনের সাথী</p>
+        <p>&copy; ২০২৬ মনের সাথী। সমস্ত অধিকার সংরক্ষিত।</p>
     </footer>
 
-    <!-- Scripts -->
+    <!-- Firebase & Main Scripts -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
+        // ডাটাবেস ইমপোর্ট করা হলো প্রোফাইল সেভ করার জন্য
+        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCYH0ZSeLjH_T3HJ9hVQ84afB5KyAEZi2Y",
             authDomain: "my-sc-tools.firebaseapp.com",
             projectId: "my-sc-tools",
             messagingSenderId: "285986090017",
-            appId: "1:285986090017:web:9d872b9bb5c472bcb74760"
+            appId: "1:285986090017:web:9d872b9bb5c472bcb74760",
+            databaseURL: "https://my-sc-tools-default-rtdb.firebaseio.com"
         };
 
         const app = initializeApp(firebaseConfig);
         const messaging = getMessaging(app);
+        const database = getDatabase(app);
+        
+        // 🔴 Socket.io Connection (সার্ভারের লিংক দিন বা ফাঁকা রাখুন যদি একই সার্ভারে থাকে)
         const socket = io(); 
 
+        // 🟢 Push Notification Logic (Error Handling Added)
         document.getElementById('followBtn').addEventListener('click', async () => {
-            const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-                document.getElementById('followBtn').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
-                try {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    document.getElementById('followBtn').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> প্রসেসিং...';
+                    
                     const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
                     await navigator.serviceWorker.ready;
+                    
                     const currentToken = await getToken(messaging, { 
                         vapidKey: 'BFZRrODefiSlDVoj_TtYJm4-iWycsHZ4uDn5hT90w-QOLV6wS7_gblBI2UUouGQcAqqnEB3FySSVF9JwbTXK7B8',
                         serviceWorkerRegistration: registration 
                     });
+                    
                     if (currentToken) {
                         await fetch('/api/saveToken', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ token: currentToken, source: 'MonerSathi_Page' })
                         });
-                        document.getElementById('followBtn').innerHTML = '<i class="fa-solid fa-check"></i> Following';
-                        document.getElementById('followBtn').style.backgroundColor = '#28a745';
+                        document.getElementById('followBtn').innerHTML = '<i class="fa-solid fa-check"></i> নোটিফিকেশন চালু আছে';
+                        document.getElementById('followBtn').classList.remove('from-pink-500', 'to-rose-500');
+                        document.getElementById('followBtn').classList.add('bg-green-500');
                         alert('ধন্যবাদ! আপনি এখন থেকে আমাদের সব আপডেট নোটিফিকেশনে পাবেন।');
                     }
-                } catch (err) { alert('ত্রুটি হয়েছে, আবার চেষ্টা করুন।'); }
+                } else {
+                    alert('আপনি নোটিফিকেশন ব্লক করেছেন। ব্রাউজার সেটিং থেকে Allow করুন।');
+                }
+            } catch (err) { 
+                console.error("Push Error:", err);
+                alert('ত্রুটি হয়েছে! ব্রাউজার সাপোর্ট নাও করতে পারে।'); 
             }
         });
 
-        // Generate Data for Main Page (Girls Grid)
+        // 🟢 Generate Profiles & Save to LocalStorage for Payment Page
         window.allGirls = [];
         const friendsGrid = document.getElementById('sec-friends');
+        const names = ["নুসরাত", "সাদিয়া", "সানিয়া", "রিমি", "আয়েশা", "তানিয়া", "রুবিনা", "মীম", "জুঁই", "কাব্য"];
 
         for(let i=1; i<=50; i++){
             const uid = 5000 + i;
-            const name = ["নুসরাত", "সাদিয়া", "সানিয়া", "রিমি", "আয়েশা", "তানিয়া", "রুবিনা"][i%7] + " " + (i+5);
-            const img = `my-logo${i}.jpg`;
-            allGirls.push({ id: uid, name: name, img: img });
+            const name = names[i % 10] + " " + (i+5);
+            const img = `my-logo${i}.jpg`; // Make sure images exist or it uses fallback
+            
+            allGirls.push({ id: uid, name: name, img: img, status: "Online" });
 
             friendsGrid.innerHTML += `
-                <div class="profile-card bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-                    <img src="${img}" class="h-44 w-full object-cover" onerror="this.src='https://i.pravatar.cc/300?img=${i}'">
-                    <div class="p-3 text-center">
-                        <h3 class="text-sm font-bold text-gray-800">${name}</h3>
-                        <p class="text-[10px] text-green-500 font-bold mb-2">● Online Now</p>
-                        <div class="flex items-center justify-center gap-1 bg-gray-50 rounded-lg py-1 mb-2">
-                            <span class="text-[10px] text-gray-400 font-mono">ID: ${uid}</span>
-                            <i class="fa-solid fa-copy text-pink-400 text-[10px] cursor-pointer" onclick="copyUID('${uid}')"></i>
+                <div class="profile-card bg-white rounded-[1.2rem] shadow-sm overflow-hidden border border-gray-100 flex flex-col">
+                    <div class="relative">
+                        <img src="${img}" class="h-40 md:h-48 w-full object-cover" onerror="this.src='https://i.pravatar.cc/300?img=${i}'">
+                        <div class="absolute bottom-2 right-2 bg-green-500 w-3 h-3 rounded-full border-2 border-white shadow-sm"></div>
+                    </div>
+                    <div class="p-3 text-center flex-1 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-800 mb-1">${name}</h3>
+                            <div class="inline-flex items-center justify-center gap-2 bg-pink-50 text-pink-600 rounded-md px-2 py-1 mb-3 cursor-pointer hover:bg-pink-100 transition" onclick="copyUID('${uid}')">
+                                <span class="text-[10px] font-bold tracking-wider">ID: ${uid}</span>
+                                <i class="fa-solid fa-copy text-[10px]"></i>
+                            </div>
                         </div>
-                        <!-- Payment Button link -->
-                        <button onclick="openPayment('${uid}')" class="w-full bg-pink-50 text-pink-500 text-[11px] font-bold py-2 rounded-lg border border-pink-100 hover:bg-pink-500 hover:text-white transition">কথা বলুন</button>
+                        <button onclick="openPayment('${uid}')" class="w-full bg-slate-900 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-pink-500 transition shadow-md flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-phone-volume"></i> কল করুন
+                        </button>
                     </div>
                 </div>
             `;
         }
 
+        // Save profiles to localStorage so Payment Page can access exact data
+        localStorage.setItem('monerSathiProfiles', JSON.stringify(allGirls));
+
+        // 🟢 Socket.io Ad Listener
         socket.on('show_ad', (data) => {
-            document.getElementById('admin-ad-box').style.display = 'block';
-            document.getElementById('ad-text').innerText = data.message;
+            // Save ad to localStorage so other pages can show it immediately
+            localStorage.setItem('current_admin_ad', data.message);
+            showAdBox(data.message);
         });
+
+        function showAdBox(msg) {
+            document.getElementById('admin-ad-box').style.display = 'block';
+            document.getElementById('ad-text').innerText = msg;
+        }
+
+        // 🟢 User Profile Logic (Save to Firebase)
+        window.saveUserProfile = function() {
+            const name = document.getElementById('uName').value;
+            const phone = document.getElementById('uPhone').value;
+            
+            if(!name || !phone) return alert("দয়া করে নাম এবং নাম্বার দিন!");
+
+            // Create a unique local ID for the user
+            let localId = localStorage.getItem('my_app_uid');
+            if(!localId) {
+                localId = 'USR_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('my_app_uid', localId);
+            }
+
+            // Save to Firebase Database under 'app_users'
+            set(ref(database, 'app_users/' + localId), {
+                name: name,
+                phone: phone,
+                createdAt: Date.now()
+            }).then(() => {
+                alert("আপনার প্রোফাইল সফলভাবে তৈরি হয়েছে!");
+                closeProfileModal();
+            }).catch((error) => {
+                alert("ত্রুটি: " + error.message);
+            });
+        };
+
+        // Check if Ad exists in memory on page load
+        window.onload = () => {
+            const savedAd = localStorage.getItem('current_admin_ad');
+            if(savedAd) showAdBox(savedAd);
+        };
     </script>
 
+    <!-- UI Functions -->
     <script>
-        // --- Functionality Logic ---
         function copyUID(id) {
             navigator.clipboard.writeText(id);
             alert("ইউজার আইডি কপি হয়েছে: " + id);
         }
 
         function openPayment(id = '') {
-            // সরাসরি payment ফোল্ডারের পেজে রিডাইরেক্ট করবে
-            if(id) {
-                window.location.href = `payment/index.html?id=${id}`;
-            } else {
-                window.location.href = `payment/index.html`;
-            }
+            // Payment পেজে আইডি পাঠানো হচ্ছে
+            window.location.href = id ? `payment/index.html?id=${id}` : `payment/index.html`;
         }
 
-        function openHelp() {
-            if(confirm("আমাদের কাস্টমার সার্ভিসের সাথে কথা বলতে চান?")) {
-                window.location.href = "https://nusratjahan-851.github.io/whatsapp-react-call/";
-            }
+        function closeAd() { 
+            document.getElementById('admin-ad-box').style.display = 'none'; 
+            localStorage.removeItem('current_admin_ad'); // মুছে দিলাম যাতে রিফ্রেশ করলে আবার না আসে
         }
 
-        function closeAd() { document.getElementById('admin-ad-box').style.display = 'none'; }
+        function openProfileModal() { document.getElementById('profileModal').classList.remove('hidden'); }
+        function closeProfileModal() { document.getElementById('profileModal').classList.add('hidden'); }
     </script>
 </body>
 </html>
